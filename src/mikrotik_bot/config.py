@@ -108,7 +108,14 @@ def load_devices(config_dir: str | Path) -> list[DeviceConfig]:
                 if target.whitelist is None
                 else parse_whitelist_entries(list(target.whitelist))
             )
-            resolved.append(ResolvedNotify(token=token, whitelist=whitelist))
+            resolved.append(
+                ResolvedNotify(
+                    token_env=target.token_env,
+                    token=token,
+                    whitelist=whitelist,
+                    status_schedule=list(target.status_schedule),
+                )
+            )
         device.notify_resolved = resolved
 
         metric_ids = [m.id for m in device.metrics]

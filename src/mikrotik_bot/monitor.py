@@ -15,7 +15,7 @@ from mikrotik_bot.formatting import (
     format_usage,
 )
 from mikrotik_bot.i18n import Translator
-from mikrotik_bot.models import DeviceConfig
+from mikrotik_bot.models import DeviceConfig, ResolvedNotify
 from mikrotik_bot.snmp_client import Sample, SnmpClient
 from mikrotik_bot.state import StateStore
 from mikrotik_bot.subscribers import SubscriberStore
@@ -47,18 +47,21 @@ class DeviceMonitor:
 
     async def notify(self, text: str) -> None:
         for target in self.device.notify_resolved:
-            chat_ids = self._subscribers.recipients(target.token, target.whitelist)
-            if not chat_ids:
-                log.warning(
-                    "[%s] no active subscribers for token …%s (whitelist=%s)",
-                    self.device.id,
-                    target.token[-6:],
-                    "open"
-                    if target.whitelist is None
-                    else target.whitelist.summary(),
-                )
-                continue
-            await self._telegram.notify_chats(target.token, chat_ids, text)
+            await self._notify_target(target, text)
+
+    async def _notify_target(self, target: ResolvedNotify, text: str) -> None:
+        chat_ids = self._subscribers.recipients(target.token, target.whitelist)
+        if not chat_ids:
+            log.warning(
+                "[%s] no active subscribers for token …%s (whitelist=%s)",
+                self.device.id,
+                target.token[-6:],
+                "open"
+                if target.whitelist is None
+                else target.whitelist.summary(),
+            )
+            return
+        await self._telegram.notify_chats(target.token, chat_ids, text)
 
     async def run_forever(self) -> None:
         extras = (
@@ -292,25 +295,45 @@ class DeviceMonitor:
             self.state[key] = False
 
     async def _maybe_scheduled_status(self, sample: Sample) -> None:
-        if not self.device.status_schedule:
+        targets = [t for t in self.device.notify_resolved if t.status_schedule]
+        if not targets:
             return
 
         now = datetime.now(self._tz)
         stamp = now.strftime("%H:%M")
         day = now.strftime("%Y-%m-%d")
-        sent: dict[str, str] = dict(self.state.get("status_schedule_sent") or {})
+        sent_all: dict[str, Any] = dict(self.state.get("status_schedule_sent") or {})
+        message: str | None = None
+        dirty = False
 
-        if stamp not in self.device.status_schedule:
-            return
-        if sent.get(stamp) == day:
-            return
+        for target in targets:
+            if stamp not in target.status_schedule:
+                continue
+            sent_raw = sent_all.get(target.token_env)
+            sent: dict[str, str] = (
+                dict(sent_raw) if isinstance(sent_raw, dict) else {}
+            )
+            if sent.get(stamp) == day:
+                continue
 
-        await self.notify(build_status_message(self._tr, self.device, sample))
-        sent[stamp] = day
-        # Drop stale keys
-        sent = {k: v for k, v in sent.items() if k in self.device.status_schedule}
-        self.state["status_schedule_sent"] = sent
-        self._persist()
+            if message is None:
+                message = build_status_message(self._tr, self.device, sample)
+            await self._notify_target(target, message)
+            sent[stamp] = day
+            sent_all[target.token_env] = {
+                k: v for k, v in sent.items() if k in target.status_schedule
+            }
+            dirty = True
+
+        active = {t.token_env for t in targets}
+        pruned = {k: v for k, v in sent_all.items() if k in active}
+        if pruned != self.state.get("status_schedule_sent"):
+            dirty = True
+            sent_all = pruned
+
+        if dirty:
+            self.state["status_schedule_sent"] = sent_all
+            self._persist()
 
     def _persist(self) -> None:
         self._state_store.save(self.device.id, self.state)

@@ -8,11 +8,27 @@ from pydantic import BaseModel, Field, field_validator
 from mikrotik_bot.whitelist import WhitelistACL, parse_whitelist_entries
 
 
+def _normalize_schedule_times(values: list[str]) -> list[str]:
+    cleaned: list[str] = []
+    for raw in values:
+        item = raw.strip()
+        parts = item.split(":")
+        if len(parts) != 2:
+            raise ValueError(f"invalid status_schedule time: {raw!r} (want HH:MM)")
+        hour, minute = int(parts[0]), int(parts[1])
+        if not (0 <= hour <= 23 and 0 <= minute <= 59):
+            raise ValueError(f"invalid status_schedule time: {raw!r}")
+        cleaned.append(f"{hour:02d}:{minute:02d}")
+    return cleaned
+
+
 class NotifyTarget(BaseModel):
     token_env: str
     # Omit / null → anyone who /start'd this bot can get pushes + commands
     # List entries: numeric Telegram user id and/or @username / username
     whitelist: list[int | str] | None = None
+    # Extra full status dumps for this bot only (HH:MM, device timezone)
+    status_schedule: list[str] = Field(default_factory=list)
 
     @field_validator("whitelist")
     @classmethod
@@ -27,12 +43,19 @@ class NotifyTarget(BaseModel):
         out.extend(f"@{u}" for u in sorted(acl.usernames))
         return out
 
+    @field_validator("status_schedule")
+    @classmethod
+    def validate_times(cls, values: list[str]) -> list[str]:
+        return _normalize_schedule_times(values)
+
 
 @dataclass
 class ResolvedNotify:
+    token_env: str
     token: str
     # None = open (all active subscribers); ACL = filter by id/username
     whitelist: WhitelistACL | None
+    status_schedule: list[str]
 
 
 class Thresholds(BaseModel):
@@ -85,7 +108,6 @@ class DeviceConfig(BaseModel):
     thresholds: Thresholds = Field(default_factory=Thresholds)
     oids: BuiltinOids = Field(default_factory=BuiltinOids)
     metrics: list[CustomMetric] = Field(default_factory=list)
-    status_schedule: list[str] = Field(default_factory=list)
     # Optional: MikroTik → bot HTTP hook auth (env var name with shared secret)
     hook_secret_env: str | None = None
 
@@ -100,21 +122,6 @@ class DeviceConfig(BaseModel):
         cleaned = value.strip()
         if not cleaned or any(ch.isspace() for ch in cleaned):
             raise ValueError("device id must be a non-empty slug without spaces")
-        return cleaned
-
-    @field_validator("status_schedule")
-    @classmethod
-    def validate_times(cls, values: list[str]) -> list[str]:
-        cleaned: list[str] = []
-        for raw in values:
-            item = raw.strip()
-            parts = item.split(":")
-            if len(parts) != 2:
-                raise ValueError(f"invalid status_schedule time: {raw!r} (want HH:MM)")
-            hour, minute = int(parts[0]), int(parts[1])
-            if not (0 <= hour <= 23 and 0 <= minute <= 59):
-                raise ValueError(f"invalid status_schedule time: {raw!r}")
-            cleaned.append(f"{hour:02d}:{minute:02d}")
         return cleaned
 
 

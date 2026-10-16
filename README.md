@@ -10,7 +10,7 @@ Designed to run in Docker: drop an `.env`, add device YAML files, `docker compos
 - Reboot detection via `sysUpTime` going backwards
 - Custom OID metrics (warn / critical)
 - Per-device poll interval and Telegram bots (optional user whitelist)
-- Scheduled full status dumps (`status_schedule`)
+- Per-bot scheduled full status dumps (`notify[].status_schedule`)
 - On-demand: `/status`, `/alerts`, `/devices`, `/help` + quick reply keyboard
 - HTTP hooks from RouterOS → fan-out to the same `notify` / whitelist audience
 
@@ -79,31 +79,36 @@ data/state/               # JSON per device + subscribers.sqlite
 | `community_env` | Name of env var with community string |
 | `interval` | Seconds between polls **for this device** |
 | `fail_limit` | Consecutive SNMP errors before “down” alert |
-| `timezone` | IANA TZ for `status_schedule` (e.g. `Europe/Moscow`) |
+| `timezone` | IANA TZ for per-bot `status_schedule` (e.g. `Europe/Moscow`) |
 | `notify` | List of bots for this device (see below) |
 | `thresholds` | `cpu` / `memory` / `disk` percent limits |
 | `oids` | Built-in metric OIDs (override per board) |
 | `metrics` | Extra gauges (`id`, `name`, `oid`, `unit`, `warn`, `critical`) |
-| `status_schedule` | Extra full snapshots, e.g. `["09:00", "18:00"]` |
 | `hook_secret_env` | Optional env var with shared secret for HTTP events from this router |
 
-### `notify` + whitelist
+### `notify` + whitelist + schedule
 
 ```yaml
 notify:
   - token_env: BOT_MAIN_TOKEN
     # no whitelist → every user who /start'd this bot gets pushes + commands
+    status_schedule:
+      - "09:00"
+      - "18:00"
   - token_env: BOT_OWNER_TOKEN
     whitelist:
       - 123456789
       - "@alice"
       - bob
+    status_schedule:
+      - "12:00"
 ```
 
 | Setup | Who can talk / get pushes |
 |--------|---------------------------|
 | `whitelist` omitted | Anyone who pressed `/start` on that bot (stored in SQLite) |
 | `whitelist: […]` | Only matching user ids / usernames — and only after they `/start` |
+| `status_schedule` | Extra full snapshots for **this bot only** (device `timezone`) |
 
 Telegram will not deliver DMs until the user has opened the bot at least once. SQLite is required for that “active users” list; alert hysteresis still uses JSON files.
 

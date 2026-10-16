@@ -19,12 +19,13 @@ interval: 30
 # Consecutive SNMP failures before "down" alert
 fail_limit: 3
 
-# IANA timezone for status_schedule
+# IANA timezone for per-bot status_schedule
 timezone: Europe/Moscow
 
 # Who gets alerts / can talk to the bot for this device.
 # token_env → secret in .env
 # whitelist → Telegram user id and/or @username (omit = anyone who /start'd)
+# status_schedule → optional full status dumps for THIS bot only (HH:MM)
 # Users must press /start once so Telegram allows DMs; we store that in SQLite.
 # Username is matched case-insensitively; if they rename, update whitelist or use id.
 notify:
@@ -33,10 +34,15 @@ notify:
       #   - 123456789
       #   - "@alice"
       #   - bob
+      status_schedule:
+          - "09:00"
+          - "18:00"
     - token_env: BOT_OWNER_OFFICE_TOKEN
       whitelist:
           - 111222333
           - "@owner_nick"
+      status_schedule:
+          - "12:00"
 
     - token_env: BOT_SECONDARY_TOKEN
       # whitelist:
@@ -116,8 +122,3 @@ metrics:
     #   unit: "V"
     #   warn: null
     #   critical: null
-
-# Extra full status dumps (HH:MM, device timezone), on top of alerts
-status_schedule:
-    - "09:00"
-    - "18:00"
