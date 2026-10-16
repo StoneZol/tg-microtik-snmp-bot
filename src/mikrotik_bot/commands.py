@@ -227,18 +227,29 @@ class CommandListener:
                         reply_markup=keyboard,
                     )
                     return
-                targets = [device]
-            else:
-                targets = scoped
+                detail = await self._monitors[device.id].status_text()
+                await self._telegram.send_message(
+                    token,
+                    chat_id,
+                    detail,
+                    reply_markup=keyboard,
+                )
+                return
 
-            chunks: list[str] = []
-            for device in targets:
-                monitor = self._monitors[device.id]
-                chunks.append(await monitor.status_text())
+            # Global status: short OK / problems list + /status_<id> links
+            blocks = [
+                await self._monitors[device.id].status_summary_text()
+                for device in scoped
+            ]
+            text = (
+                self._tr.t("cmd_status_summary_header")
+                + "\n\n"
+                + "\n\n".join(blocks)
+            )
             await self._telegram.send_message(
                 token,
                 chat_id,
-                "\n\n".join(chunks),
+                text,
                 reply_markup=keyboard,
             )
             return

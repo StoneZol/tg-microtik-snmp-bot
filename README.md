@@ -127,8 +127,8 @@ Private chats only. Access is checked against each device’s whitelist for that
 | Command / button | Action |
 |---------|--------|
 | `/start` / `/help` | Register + help + show keyboard |
-| `/status` / **Status** | Live snapshot of all allowed devices |
-| `/status <id>` or `/status_<id>` | One device (shown next to each row in `/devices`) |
+| `/status` / **Status** | Short OK / PROBLEMS / DOWN list + `/status_<id>` links |
+| `/status <id>` or `/status_<id>` | Full metrics for one device |
 | `/alerts` / **Alerts** | Currently active threshold / outage flags |
 | `/devices` / **Devices** | List device ids |
 

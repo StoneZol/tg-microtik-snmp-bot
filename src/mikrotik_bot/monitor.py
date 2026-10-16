@@ -8,6 +8,8 @@ from zoneinfo import ZoneInfo
 
 from mikrotik_bot.formatting import (
     build_status_message,
+    build_status_summary_block,
+    collect_sample_issues,
     format_metric_value,
     format_pct,
     format_usage,
@@ -94,6 +96,24 @@ class DeviceMonitor:
                 name=self.device.name,
                 host=self.device.host,
                 error=str(exc),
+            )
+
+    async def status_summary_text(self) -> str:
+        try:
+            sample = await self.fetch_sample()
+            issues = collect_sample_issues(self._tr, self.device, sample)
+            return build_status_summary_block(
+                self._tr,
+                self.device,
+                ok=not issues,
+                issues=issues,
+            )
+        except Exception:  # noqa: BLE001
+            return build_status_summary_block(
+                self._tr,
+                self.device,
+                ok=False,
+                down=True,
             )
 
     async def _tick(self) -> None:

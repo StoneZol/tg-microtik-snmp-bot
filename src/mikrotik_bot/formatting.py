@@ -67,6 +67,54 @@ def metric_emoji(metric: CustomMetric | None, metric_id: str) -> str:
     return "📌"
 
 
+def collect_sample_issues(
+    tr: Translator, device: DeviceConfig, sample: Sample
+) -> list[str]:
+    """Human-readable issue labels for thresholds currently breached."""
+    issues: list[str] = []
+    if sample.cpu >= device.thresholds.cpu:
+        issues.append(tr.t("label_cpu"))
+    if sample.memory_pct >= device.thresholds.memory:
+        issues.append(tr.t("label_memory"))
+    if sample.disk_pct >= device.thresholds.disk:
+        issues.append(tr.t("label_disk"))
+
+    for metric in device.metrics:
+        value = sample.custom.get(metric.id)
+        if value is None:
+            continue
+        if metric.critical is not None and value >= metric.critical:
+            issues.append(f"{metric.name} (critical)")
+        elif metric.warn is not None and value >= metric.warn:
+            issues.append(f"{metric.name} (warn)")
+    return issues
+
+
+def build_status_summary_block(
+    tr: Translator,
+    device: DeviceConfig,
+    *,
+    ok: bool,
+    down: bool = False,
+    issues: list[str] | None = None,
+) -> str:
+    if down:
+        status = tr.t("status_summary_down")
+    elif ok:
+        status = tr.t("status_summary_ok")
+    else:
+        status = tr.t(
+            "status_summary_problems",
+            issues=", ".join(issues or []),
+        )
+    return tr.t(
+        "cmd_status_summary_line",
+        id=device.id,
+        name=device.name,
+        status=status,
+    )
+
+
 def build_status_message(
     tr: Translator, device: DeviceConfig, sample: Sample
 ) -> str:
