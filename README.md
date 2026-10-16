@@ -11,7 +11,7 @@ Designed to run in Docker: drop an `.env`, add device YAML files, `docker compos
 - Custom OID metrics (warn / critical)
 - Per-device poll interval and Telegram bots (optional user whitelist)
 - Scheduled full status dumps (`status_schedule`)
-- On-demand: `/status`, `/status <id>`, `/devices`, `/help`
+- On-demand: `/status`, `/alerts`, `/devices`, `/help` + quick reply keyboard
 
 ## Quick start (Docker)
 
@@ -51,7 +51,7 @@ docker compose restart                      # yaml / locales
 docker compose up -d --force-recreate       # if you changed .env
 ```
 
-Then in Telegram: `/start` → `/status`.  
+Then in Telegram: `/start` (quick keyboard appears) → **Status** / **Alerts** / **Devices**.  
 State: `./data/state` (JSON + `subscribers.sqlite`).
 
 ---
@@ -107,21 +107,30 @@ Telegram will not deliver DMs until the user has opened the bot at least once. S
 
 ### Translations
 
-Copy `locales/en.json` → `locales/ru.json`, translate values, set `BOT_LANG=ru` in `.env`.  
-Placeholders like `{name}`, `{host}`, `{value}` must stay intact.
+Built-in: `locales/en.json`, `locales/ru.json`.  
+Set in `.env`:
+
+```bash
+BOT_LANG=ru
+```
+
+Then recreate the container (`docker compose up -d --force-recreate`) so the env applies.  
+Placeholders like `{name}`, `{host}`, `{value}` must stay intact if you edit locale files.
 
 ---
 
 ## Telegram commands
 
-Private chats only. Access is checked against each device’s whitelist for that bot token.
+Private chats only. Access is checked against each device’s whitelist for that bot token.  
+`/start` also installs a **quick keyboard** (Status / Alerts / Devices / Help) and registers the bot command menu.
 
-| Command | Action |
+| Command / button | Action |
 |---------|--------|
-| `/start` / `/help` | Register as active + short help |
-| `/devices` | Devices you are allowed to see on this bot |
-| `/status` | Live snapshot of those devices |
-| `/status <id>` | One device |
+| `/start` / `/help` | Register + help + show keyboard |
+| `/status` / **Status** | Live snapshot of all allowed devices |
+| `/status <id>` or `/status_<id>` | One device (shown next to each row in `/devices`) |
+| `/alerts` / **Alerts** | Currently active threshold / outage flags |
+| `/devices` / **Devices** | List device ids |
 
 ---
 

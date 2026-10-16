@@ -7,7 +7,6 @@ import httpx
 
 log = logging.getLogger(__name__)
 
-
 class TelegramClient:
     def __init__(self, timeout: float = 20.0) -> None:
         self._client = httpx.AsyncClient(timeout=timeout)
@@ -15,16 +14,36 @@ class TelegramClient:
     async def aclose(self) -> None:
         await self._client.aclose()
 
-    async def send_message(self, token: str, chat_id: str, text: str) -> None:
+    async def set_my_commands(
+        self, token: str, commands: list[dict[str, str]]
+    ) -> None:
+        url = f"https://api.telegram.org/bot{token}/setMyCommands"
+        response = await self._client.post(url, json={"commands": commands})
+        if response.status_code >= 400:
+            log.error(
+                "setMyCommands failed (%s): %s",
+                response.status_code,
+                response.text[:300],
+            )
+            response.raise_for_status()
+
+    async def send_message(
+        self,
+        token: str,
+        chat_id: str,
+        text: str,
+        *,
+        reply_markup: dict[str, Any] | None = None,
+    ) -> None:
         url = f"https://api.telegram.org/bot{token}/sendMessage"
-        response = await self._client.post(
-            url,
-            json={
-                "chat_id": chat_id,
-                "text": text,
-                "disable_web_page_preview": True,
-            },
-        )
+        payload: dict[str, Any] = {
+            "chat_id": chat_id,
+            "text": text,
+            "disable_web_page_preview": True,
+        }
+        if reply_markup is not None:
+            payload["reply_markup"] = reply_markup
+        response = await self._client.post(url, json=payload)
         if response.status_code >= 400:
             log.error(
                 "Telegram send failed (%s): %s",
