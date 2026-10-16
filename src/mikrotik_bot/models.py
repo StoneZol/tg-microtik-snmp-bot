@@ -86,9 +86,12 @@ class DeviceConfig(BaseModel):
     oids: BuiltinOids = Field(default_factory=BuiltinOids)
     metrics: list[CustomMetric] = Field(default_factory=list)
     status_schedule: list[str] = Field(default_factory=list)
+    # Optional: MikroTik → bot HTTP hook auth (env var name with shared secret)
+    hook_secret_env: str | None = None
 
     # Resolved at load time from env
     community: str = ""
+    hook_secret: str = ""
     notify_resolved: list[ResolvedNotify] = Field(default_factory=list)
 
     @field_validator("id")
@@ -120,3 +123,6 @@ class AppSettings(BaseModel):
     config_dir: str = "/app/config/devices"
     state_dir: str = "/data/state"
     locales_dir: str = "/app/locales"
+    # 0 = hook listener disabled
+    hook_port: int = 8443
+    hook_host: str = "0.0.0.0"

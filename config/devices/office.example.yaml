@@ -10,6 +10,9 @@ host: 10.0.0.1
 port: 161
 community_env: SNMP_COMMUNITY_OFFICE
 
+# Optional: shared secret for HTTP hooks from this router (see README)
+# hook_secret_env: HOOK_SECRET_OFFICE
+
 # Seconds between SNMP polls for THIS device
 interval: 30
 

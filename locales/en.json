@@ -40,5 +40,10 @@
   "cmd_alerts_header": "🚨 Active alerts:",
   "cmd_alerts_none": "✅ No active alerts. All quiet.",
   "cmd_alerts_device": "⚠️ {name} ({host}): {items}",
-  "cmd_alerts_device_ok": "✅ {name} ({host}): clear"
+  "cmd_alerts_device_ok": "✅ {name} ({host}): clear",
+  "hook_severity_info": "ℹ️ info",
+  "hook_severity_warn": "⚠️ warn",
+  "hook_severity_critical": "🔴 critical",
+  "hook_no_message": "(no details)",
+  "hook_event": "📨 Router event · {name} ({host})\nid: {id}\nevent: {event}\nseverity: {severity}\n{message}"
 }

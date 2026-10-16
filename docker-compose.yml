@@ -5,6 +5,9 @@ services:
     restart: unless-stopped
     env_file:
       - .env
+    ports:
+      # MikroTik → bot event hook (change host port if needed; SoftEther often owns 443)
+      - "${HOOK_PORT:-8443}:${HOOK_PORT:-8443}"
     volumes:
       # Device configs — edit on host, restart container to reload
       - ./config/devices:/app/config/devices:ro

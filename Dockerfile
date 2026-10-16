@@ -4,7 +4,11 @@ ENV PYTHONDONTWRITEBYTECODE=1 \
     PYTHONUNBUFFERED=1 \
     BOT_LANG=en \
     CONFIG_DIR=/app/config/devices \
-    STATE_DIR=/data/state
+    STATE_DIR=/data/state \
+    HOOK_HOST=0.0.0.0 \
+    HOOK_PORT=8443
+
+EXPOSE 8443
 
 WORKDIR /app
 

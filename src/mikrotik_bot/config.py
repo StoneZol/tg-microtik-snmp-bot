@@ -32,6 +32,12 @@ def _message_lang() -> str:
 
 def load_settings() -> AppSettings:
     load_dotenv()
+    hook_port_raw = (os.getenv("HOOK_PORT") or "8443").strip()
+    try:
+        hook_port = int(hook_port_raw)
+    except ValueError as exc:
+        raise ConfigError(f"HOOK_PORT must be an integer, got {hook_port_raw!r}") from exc
+
     return AppSettings(
         lang=_message_lang(),
         config_dir=resolve_dir("CONFIG_DIR", "/app/config/devices", "config/devices"),
@@ -39,6 +45,8 @@ def load_settings() -> AppSettings:
             "STATE_DIR", "/data/state", "data/state", create=True
         ),
         locales_dir=resolve_dir("LOCALES_DIR", "/app/locales", "locales"),
+        hook_port=hook_port,
+        hook_host=(os.getenv("HOOK_HOST") or "0.0.0.0").strip() or "0.0.0.0",
     )
 
 
@@ -90,6 +98,8 @@ def load_devices(config_dir: str | Path) -> list[DeviceConfig]:
         seen_ids.add(device.id)
 
         device.community = _require_env(device.community_env)
+        if device.hook_secret_env:
+            device.hook_secret = _require_env(device.hook_secret_env)
         resolved: list[ResolvedNotify] = []
         for target in device.notify:
             token = _require_env(target.token_env)

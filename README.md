@@ -12,6 +12,7 @@ Designed to run in Docker: drop an `.env`, add device YAML files, `docker compos
 - Per-device poll interval and Telegram bots (optional user whitelist)
 - Scheduled full status dumps (`status_schedule`)
 - On-demand: `/status`, `/alerts`, `/devices`, `/help` + quick reply keyboard
+- HTTP hooks from RouterOS → fan-out to the same `notify` / whitelist audience
 
 ## Quick start (Docker)
 
@@ -84,6 +85,7 @@ data/state/               # JSON per device + subscribers.sqlite
 | `oids` | Built-in metric OIDs (override per board) |
 | `metrics` | Extra gauges (`id`, `name`, `oid`, `unit`, `warn`, `critical`) |
 | `status_schedule` | Extra full snapshots, e.g. `["09:00", "18:00"]` |
+| `hook_secret_env` | Optional env var with shared secret for HTTP events from this router |
 
 ### `notify` + whitelist
 
@@ -131,6 +133,88 @@ Private chats only. Access is checked against each device’s whitelist for that
 | `/status <id>` or `/status_<id>` | Full metrics for one device |
 | `/alerts` / **Alerts** | Currently active threshold / outage flags |
 | `/devices` / **Devices** | List device ids |
+
+---
+
+## Router → bot HTTP hooks (events)
+
+MikroTik does **not** need bot token / chat ids. It posts an event to your VDS; the bot looks up `device_id`, checks `secret`, and fans out via that device’s `notify` list (same ACL as SNMP alerts).
+
+### Port
+
+Default **`HOOK_PORT=8443`** (mapped in `docker-compose.yml`).  
+Use a free port if SoftEther/VPN already owns `443`/`80`.
+
+```env
+HOOK_PORT=8443
+HOOK_SECRET_OFFICE=long-random-string
+```
+
+```yaml
+# in device yaml
+hook_secret_env: HOOK_SECRET_OFFICE
+```
+
+`HOOK_PORT=0` disables the listener.
+
+### Contract
+
+**Endpoint:** `POST` or `GET` `/hooks/v1/event`  
+**Health:** `GET` `/hooks/health`
+
+**JSON body** (preferred):
+
+```json
+{
+  "device_id": "office",
+  "secret": "long-random-string",
+  "event": "login_failure",
+  "severity": "critical",
+  "message": "login failure for user admin from 1.2.3.4"
+}
+```
+
+| Field | Required | Notes |
+|--------|----------|--------|
+| `device_id` | yes | Must match yaml `id` |
+| `secret` | yes | Must match env from `hook_secret_env` |
+| `event` | no | Default `custom`. Suggested: `login_failure`, `netwatch_down`, `netwatch_up`, `firewall`, `system`, `custom` |
+| `severity` | no | `info` \| `warn` \| `critical` (default `info`) |
+| `message` | no | Free text / log line |
+
+Aliases accepted: `id`/`device`, `msg`/`text`, `type`/`topic`, `level`.  
+Form-urlencoded and query-string fields work the same (handy for simple `/tool fetch`).
+
+**Responses:** `{"ok":true,...}` or `401` unauthorized / `400` bad request.
+
+Example probe from the VDS:
+
+```bash
+curl -sS -X POST "http://127.0.0.1:8443/hooks/v1/event" \
+  -H "Content-Type: application/json" \
+  -d '{"device_id":"office","secret":"long-random-string","event":"login_failure","severity":"critical","message":"test from curl"}'
+```
+
+### Minimal RouterOS 7 script (POST JSON)
+
+Replace `HOST`, `SECRET`, and keep `device_id` equal to yaml `id`:
+
+```text
+/system script
+add name=tg-hook-login policy=read,write,test,sensitive source={
+  :local host "http://YOUR_VDS_IP:8443"
+  :local secret "long-random-string"
+  :local deviceId "office"
+  :local msg "login failure (see router log)"
+  :local body ("{\"device_id\":\"" . $deviceId . "\",\"secret\":\"" . $secret . "\",\"event\":\"login_failure\",\"severity\":\"critical\",\"message\":\"" . $msg . "\"}")
+  /tool fetch url=($host . "/hooks/v1/event") http-method=post http-header-field="content-type: application/json" http-data=$body keep-result=no
+}
+```
+
+Then wire a **logging action** (or scheduler) that runs this script on login-failure topics.  
+Prefer firewall: allow `HOOK_PORT` **only from the router’s WAN IP**.
+
+HTTPS on this port is optional later (Caddy/nginx on `8443` only); plain HTTP behind IP allowlist is OK to start.
 
 ---
 

@@ -3,11 +3,11 @@ from __future__ import annotations
 import asyncio
 import logging
 import sys
-
 from pathlib import Path
 
 from mikrotik_bot.commands import CommandListener
 from mikrotik_bot.config import ConfigError, load_devices, load_settings, unique_bot_tokens
+from mikrotik_bot.hooks import run_hook_server
 from mikrotik_bot.i18n import Translator
 from mikrotik_bot.monitor import DeviceMonitor
 from mikrotik_bot.snmp_client import SnmpClient
@@ -33,6 +33,7 @@ async def run() -> None:
     snmp = SnmpClient()
     telegram = TelegramClient()
 
+    devices_by_id = {device.id: device for device in devices}
     monitors = {
         device.id: DeviceMonitor(
             device=device,
@@ -56,17 +57,32 @@ async def run() -> None:
     )
 
     logging.getLogger(__name__).info(
-        "Loaded %s device(s), %s bot token(s), lang=%s",
+        "Loaded %s device(s), %s bot token(s), lang=%s, hook_port=%s",
         len(devices),
         len(tokens),
         settings.lang,
+        settings.hook_port,
     )
 
-    try:
-        await asyncio.gather(
-            listener.run_forever(),
-            *(monitor.run_forever() for monitor in monitors.values()),
+    tasks = [
+        listener.run_forever(),
+        *(monitor.run_forever() for monitor in monitors.values()),
+    ]
+    if settings.hook_port > 0:
+        tasks.append(
+            run_hook_server(
+                host=settings.hook_host,
+                port=settings.hook_port,
+                devices=devices_by_id,
+                monitors=monitors,
+                translator=translator,
+            )
         )
+    else:
+        logging.getLogger(__name__).info("Hook listener disabled (HOOK_PORT=0)")
+
+    try:
+        await asyncio.gather(*tasks)
     finally:
         await telegram.aclose()
 
