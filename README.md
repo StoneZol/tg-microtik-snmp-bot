@@ -178,7 +178,7 @@ hook_secret_env: HOOK_SECRET_OFFICE
 |--------|----------|--------|
 | `device_id` | yes | Must match yaml `id` |
 | `secret` | yes | Must match env from `hook_secret_env` |
-| `event` | no | Default `custom`. Suggested: `login_failure`, `netwatch_down`, `netwatch_up`, `firewall`, `system`, `custom` |
+| `event` | no | Default `custom`. Suggested: `login_failure`, `login_success`, `netwatch_down`, `netwatch_up`, `firewall`, `system`, `custom` |
 | `severity` | no | `info` \| `warn` \| `critical` (default `info`) |
 | `message` | no | Free text / log line |
 
