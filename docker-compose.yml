@@ -1,0 +1,19 @@
+services:
+  mikrotik-bot:
+    build: .
+    container_name: mikrotik-snmp-bot
+    restart: unless-stopped
+    env_file:
+      - .env
+    volumes:
+      # Device configs — edit on host, restart container to reload
+      - ./config/devices:/app/config/devices:ro
+      # Optional: override / add locale files
+      - ./locales:/app/locales:ro
+      # Alert hysteresis, uptime, outage flags
+      - ./data/state:/data/state
+    logging:
+      driver: json-file
+      options:
+        max-size: "10m"
+        max-file: "3"

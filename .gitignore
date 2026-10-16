@@ -1,0 +1,17 @@
+.env
+.venv/
+venv/
+__pycache__/
+*.py[cod]
+*.egg-info/
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+data/
+*.log
+.DS_Store
+original.py
+
+# Real device configs stay local — only the example is published
+config/devices/*
+!config/devices/office.example.yaml

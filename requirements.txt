@@ -1,0 +1,7 @@
+pysnmp>=7.1.0,<8
+pyasn1>=0.6.0
+PyYAML>=6.0.1
+python-dotenv>=1.0.1
+httpx>=0.27.0
+pydantic>=2.7.0
+tzdata>=2024.1
