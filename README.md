@@ -173,7 +173,7 @@ hook_secret_env: HOOK_SECRET_OFFICE
 {
   "device_id": "office",
   "secret": "long-random-string",
-  "event": "login_failure",
+  "event": "Failed login",
   "severity": "critical",
   "message": "login failure for user admin from 1.2.3.4"
 }
@@ -183,7 +183,7 @@ hook_secret_env: HOOK_SECRET_OFFICE
 |--------|----------|--------|
 | `device_id` | yes | Must match yaml `id` |
 | `secret` | yes | Must match env from `hook_secret_env` |
-| `event` | no | Default `custom`. Suggested: `login_failure`, `login_success`, `netwatch_down`, `netwatch_up`, `firewall`, `system`, `custom` |
+| `event` | no | Free-form label shown in Telegram (any string you choose). Default `custom` |
 | `severity` | no | `info` \| `warn` \| `critical` (default `info`) |
 | `message` | no | Free text / log line |
 
@@ -197,7 +197,7 @@ Example probe from the VDS:
 ```bash
 curl -sS -X POST "http://127.0.0.1:8443/hooks/v1/event" \
   -H "Content-Type: application/json" \
-  -d '{"device_id":"office","secret":"long-random-string","event":"login_failure","severity":"critical","message":"test from curl"}'
+  -d '{"device_id":"office","secret":"long-random-string","event":"Failed login","severity":"critical","message":"test from curl"}'
 ```
 
 ### Minimal RouterOS 7 script (POST JSON)
@@ -210,8 +210,9 @@ add name=tg-hook-login policy=read,write,test,sensitive source={
   :local host "http://YOUR_VDS_IP:8443"
   :local secret "long-random-string"
   :local deviceId "office"
+  :local eventName "Failed login"
   :local msg "login failure (see router log)"
-  :local body ("{\"device_id\":\"" . $deviceId . "\",\"secret\":\"" . $secret . "\",\"event\":\"login_failure\",\"severity\":\"critical\",\"message\":\"" . $msg . "\"}")
+  :local body ("{\"device_id\":\"" . $deviceId . "\",\"secret\":\"" . $secret . "\",\"event\":\"" . $eventName . "\",\"severity\":\"critical\",\"message\":\"" . $msg . "\"}")
   /tool fetch url=($host . "/hooks/v1/event") http-method=post http-header-field="content-type: application/json" http-data=$body keep-result=no
 }
 ```

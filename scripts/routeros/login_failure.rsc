@@ -7,6 +7,8 @@
 :local hookBase "http://xxx:8443"
 :local hookSecret "xxx"
 :local deviceId "xxx"
+# Free-form label shown as event: in Telegram — pick any name you like
+:local eventName "Failed login"
 :local rawMsg ""
 :do { :set rawMsg $"message" } on-error={}
 :if ([:len $rawMsg] = 0) do={ :do { :set rawMsg $message } on-error={} }
@@ -51,7 +53,7 @@
 :local url ($hookBase . "/hooks/v1/event" \
   . "?device_id=" . [:convert $deviceId to=url] \
   . "&secret=" . [:convert $hookSecret to=url] \
-  . "&event=login_failure" \
+  . "&event=" . [:convert $eventName to=url] \
   . "&severity=critical" \
   . "&message=" . [:convert $niceMsg to=url])
 /tool fetch url=$url http-method=get keep-result=no check-certificate=no

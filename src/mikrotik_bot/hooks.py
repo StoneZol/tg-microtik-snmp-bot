@@ -16,18 +16,7 @@ if TYPE_CHECKING:
 
 log = logging.getLogger(__name__)
 
-# Documented event names (free-form string is still accepted)
-KNOWN_EVENTS = frozenset(
-    {
-        "login_failure",
-        "login_success",
-        "netwatch_down",
-        "netwatch_up",
-        "firewall",
-        "system",
-        "custom",
-    }
-)
+# event = free-form label (any string the user chooses); severity is the only enum
 SEVERITIES = frozenset({"info", "warn", "critical"})
 
 
@@ -79,11 +68,9 @@ async def _parse_payload(request: web.Request) -> dict[str, str]:
     }
 
 
-def _escape_markdown(text: str) -> str:
-    """Escape Telegram legacy Markdown specials (keep intentional ` in message)."""
-    for ch in ("\\", "*", "_", "[", "]"):
-        text = text.replace(ch, f"\\{ch}")
-    return text
+def _md_code(text: str) -> str:
+    """Telegram Markdown tap-to-copy span (strip nested backticks)."""
+    return f"`{str(text).replace('`', '')}`"
 
 
 def format_hook_message(
@@ -97,11 +84,11 @@ def format_hook_message(
     sev = severity if severity in SEVERITIES else "info"
     return tr.t(
         "hook_event",
-        name=_escape_markdown(device.name),
-        host=_escape_markdown(device.host),
-        id=_escape_markdown(device.id),
-        event=_escape_markdown(event),
-        severity=_escape_markdown(tr.t(f"hook_severity_{sev}")),
+        name=_md_code(device.name),
+        host=_md_code(device.host),
+        id=_md_code(device.id),
+        event=_md_code(event),
+        severity=_md_code(tr.t(f"hook_severity_{sev}")),
         message=message or tr.t("hook_no_message"),
     )
 
