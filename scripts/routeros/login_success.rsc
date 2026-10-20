@@ -43,9 +43,9 @@
 # Backticks → Telegram Markdown tap-to-copy (bot sends parse_mode=Markdown)
 :local q "`"
 :local niceMsg ("SUCCESSFUL LOGIN" \
-  . " | router=" . $ident \
-  . " | board=" . $board \
-  . " | ros=" . $ver \
+  . " | router=" . $q . $ident . $q \
+  . " | board=" . $q . $board . $q \
+  . " | ros=" . $q . $ver . $q \
   . " | user=" . $q . $username . $q \
   . " | from=" . $q . $srcAddress . $q \
   . " | via=" . $q . $service . $q)
