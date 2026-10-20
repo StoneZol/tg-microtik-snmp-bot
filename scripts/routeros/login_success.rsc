@@ -38,14 +38,16 @@
 :local ident [/system identity get name]
 :local board [/system resource get board-name]
 :local ver [/system resource get version]
+# Backticks → Telegram Markdown tap-to-copy (bot sends parse_mode=Markdown)
+:local q "`"
 :local niceMsg ("SUCCESSFUL LOGIN" \
   . " | router=" . $ident \
   . " | board=" . $board \
   . " | ros=" . $ver \
-  . " | user=" . $username \
-  . " | from=" . $srcAddress \
-  . " | via=" . $service \
-  . " | raw=" . $rawMsg)
+  . " | user=" . $q . $username . $q \
+  . " | from=" . $q . $srcAddress . $q \
+  . " | via=" . $q . $service . $q)
+  # . " | raw=" . $rawMsg)
 :local url ($hookBase . "/hooks/v1/event" \
   . "?device_id=" . [:convert $deviceId to=url] \
   . "&secret=" . [:convert $hookSecret to=url] \

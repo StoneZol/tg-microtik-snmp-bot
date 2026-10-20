@@ -45,11 +45,17 @@ class DeviceMonitor:
         self._failures = int(self.state.get("failures", 0))
         self._outage_notified = bool(self.state.get("outage_notified", False))
 
-    async def notify(self, text: str) -> None:
+    async def notify(self, text: str, *, parse_mode: str | None = None) -> None:
         for target in self.device.notify_resolved:
-            await self._notify_target(target, text)
+            await self._notify_target(target, text, parse_mode=parse_mode)
 
-    async def _notify_target(self, target: ResolvedNotify, text: str) -> None:
+    async def _notify_target(
+        self,
+        target: ResolvedNotify,
+        text: str,
+        *,
+        parse_mode: str | None = None,
+    ) -> None:
         chat_ids = self._subscribers.recipients(target.token, target.whitelist)
         if not chat_ids:
             log.warning(
@@ -61,7 +67,9 @@ class DeviceMonitor:
                 else target.whitelist.summary(),
             )
             return
-        await self._telegram.notify_chats(target.token, chat_ids, text)
+        await self._telegram.notify_chats(
+            target.token, chat_ids, text, parse_mode=parse_mode
+        )
 
     async def run_forever(self) -> None:
         extras = (

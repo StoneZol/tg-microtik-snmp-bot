@@ -79,6 +79,13 @@ async def _parse_payload(request: web.Request) -> dict[str, str]:
     }
 
 
+def _escape_markdown(text: str) -> str:
+    """Escape Telegram legacy Markdown specials (keep intentional ` in message)."""
+    for ch in ("\\", "*", "_", "[", "]"):
+        text = text.replace(ch, f"\\{ch}")
+    return text
+
+
 def format_hook_message(
     tr: Translator,
     device: DeviceConfig,
@@ -90,11 +97,11 @@ def format_hook_message(
     sev = severity if severity in SEVERITIES else "info"
     return tr.t(
         "hook_event",
-        name=device.name,
-        host=device.host,
-        id=device.id,
-        event=event,
-        severity=tr.t(f"hook_severity_{sev}"),
+        name=_escape_markdown(device.name),
+        host=_escape_markdown(device.host),
+        id=_escape_markdown(device.id),
+        event=_escape_markdown(event),
+        severity=_escape_markdown(tr.t(f"hook_severity_{sev}")),
         message=message or tr.t("hook_no_message"),
     )
 
@@ -143,7 +150,8 @@ def create_hook_app(
         )
         monitor = monitors[device_id]
         try:
-            await monitor.notify(text)
+            # Markdown so `value` from RouterOS scripts is tap-to-copy in Telegram
+            await monitor.notify(text, parse_mode="Markdown")
         except Exception:  # noqa: BLE001
             log.exception("[%s] hook notify failed", device_id)
             raise web.HTTPBadGateway(text='{"ok":false,"error":"notify_failed"}')

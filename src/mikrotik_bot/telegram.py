@@ -34,6 +34,7 @@ class TelegramClient:
         text: str,
         *,
         reply_markup: dict[str, Any] | None = None,
+        parse_mode: str | None = None,
     ) -> None:
         url = f"https://api.telegram.org/bot{token}/sendMessage"
         payload: dict[str, Any] = {
@@ -43,6 +44,8 @@ class TelegramClient:
         }
         if reply_markup is not None:
             payload["reply_markup"] = reply_markup
+        if parse_mode:
+            payload["parse_mode"] = parse_mode
         response = await self._client.post(url, json=payload)
         if response.status_code >= 400:
             log.error(
@@ -53,7 +56,12 @@ class TelegramClient:
             response.raise_for_status()
 
     async def notify_chats(
-        self, token: str, chat_ids: list[str], text: str
+        self,
+        token: str,
+        chat_ids: list[str],
+        text: str,
+        *,
+        parse_mode: str | None = None,
     ) -> None:
         if not chat_ids:
             log.warning("No subscribers to notify for this bot push")
@@ -62,7 +70,9 @@ class TelegramClient:
         errors: list[str] = []
         for chat_id in chat_ids:
             try:
-                await self.send_message(token, chat_id, text)
+                await self.send_message(
+                    token, chat_id, text, parse_mode=parse_mode
+                )
             except Exception as exc:  # noqa: BLE001 — fan-out must continue
                 errors.append(f"{chat_id}: {exc}")
                 log.exception("Failed to notify chat %s", chat_id)
